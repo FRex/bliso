@@ -193,7 +193,16 @@ static int doit(char diskletter, const wchar_t * outfilepath)
     if(outfilepath == NULL)
     {
         myCloseHandle(diskhandle, "diskhandle");
-        wprintf(L"Drive %c seems to be OK and ready to rip\n", diskletter);
+        if(geo.BytesPerSector == 2048)
+        {
+            wprintf(L"Drive %c seems to be OK and ready to rip, BytesPerSector = 2048, as expected\n",
+                diskletter);
+        }
+        else
+        {
+            wprintf(L"Drive %c seems to be OK and ready to rip, BytesPerSector = %u, unexpected but might be OK\n",
+                diskletter, geo.BytesPerSector);
+        }
         return 0;
     }
 
