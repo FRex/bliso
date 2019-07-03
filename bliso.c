@@ -125,6 +125,12 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector)
             fwprintf(stderr, L"writecount(%u) != readcount(%u)\n", writecount, readcount);
             return 1;
         }
+
+        elapsedtime = mytime() - starttime;
+        wprintf(L"progress so far: %lld bytes, %.3f MiB, %.3fs, %.3f MiB/s\n",
+            totalread, totalread / (1024.0 * 1024.0),
+            elapsedtime, totalread / (1024.0 * 1024.0 * elapsedtime)
+        );
     } /* while 1 */
 
     elapsedtime = mytime() - starttime;
