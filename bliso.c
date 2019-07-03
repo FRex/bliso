@@ -83,7 +83,7 @@ static unsigned calcbuffsize(unsigned bytespersector)
     return ret;
 }
 
-static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector)
+static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, s64 desiredsize)
 {
     unsigned buffsize;
     DWORD readcount, writecount;
@@ -134,9 +134,30 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector)
         );
     } /* while 1 */
 
+    memset(buff, 0x0, buffsize);
+    while(totalread < desiredsize)
+    {
+        const s64 need = desiredsize - totalread;
+        readcount = (need < ((s64)buffsize)) ? ((unsigned)need) : buffsize;
+
+        totalread += readcount;
+
+        if(!WriteFile(isohandle, buff, readcount, &writecount, NULL))
+        {
+            fwprintf(stderr, L"WriteFile failed, GetLastError() = %u\n", GetLastError());
+            return 1;
+        }
+
+        if(writecount != readcount)
+        {
+            fwprintf(stderr, L"writecount(%u) != readcount(%u)\n", writecount, readcount);
+            return 1;
+        }
+    }
+
     elapsedtime = mytime() - starttime;
 
-    wprintf(L"ALL OK: total read/write: %lld bytes, %.3f MiB, %.3fs, %.3f MiB/s\n",
+    wprintf(L"ALL OK: total write: %lld bytes, %.3f MiB, %.3fs, %.3f MiB/s\n",
         totalread, totalread / (1024.0 * 1024.0),
         elapsedtime, totalread / (1024.0 * 1024.0 * elapsedtime)
     );
@@ -148,9 +169,10 @@ static int doit(char diskletter, const wchar_t * outfilepath)
 {
     HANDLE diskhandle;
     HANDLE isohandle;
-    DISK_GEOMETRY geo;
+    DISK_GEOMETRY_EX geo;
     DWORD unused;
     int ret;
+    wchar_t name[512];
 
     diskhandle = openDiskHandle(diskletter);
     if(diskhandle == INVALID_HANDLE_VALUE)
@@ -159,7 +181,7 @@ static int doit(char diskletter, const wchar_t * outfilepath)
         return 1;
     }
 
-    if(!DeviceIoControl(diskhandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &geo, sizeof(geo), &unused, NULL))
+    if(!DeviceIoControl(diskhandle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geo, sizeof(geo), &unused, NULL))
     {
         const DWORD lasterror = GetLastError();
         if(lasterror == ERROR_NOT_READY)
@@ -175,34 +197,37 @@ static int doit(char diskletter, const wchar_t * outfilepath)
         return 1;
     }
 
-    if(geo.MediaType != RemovableMedia)
+    if(geo.Geometry.MediaType != RemovableMedia)
     {
         fwprintf(stderr, L"geo.MediaType is not RemovableMedia\n");
         myCloseHandle(diskhandle, "diskhandle");
         return 1;
     }
 
-    if(geo.BytesPerSector == 0u)
+    if(geo.Geometry.BytesPerSector == 0u)
     {
         fwprintf(stderr, L"geo.BytesPerSector is 0\n");
         myCloseHandle(diskhandle, "diskhandle");
         return 1;
     }
 
+    memset(name, 0x0, sizeof(wchar_t) * 512);
+    if(!GetVolumeInformationByHandleW(diskhandle, name, 510, NULL, NULL, NULL, NULL, 0))
+    {
+        fwprintf(stderr, L"%c - GetVolumeInformationByHandleW failed, GetLastError() = %u\n", diskletter, GetLastError());
+        myCloseHandle(diskhandle, "diskhandle");
+        return 1;
+    }
+
+    wprintf(L"Disc %c name: %ls\n", diskletter, name);
+    wprintf(L"Disc %c size: %lld\n", diskletter, geo.DiskSize.QuadPart);
+    wprintf(L"Disc %c block size: %u\n", diskletter, geo.Geometry.BytesPerSector);
+    wprintf(L"Disc %c seems ready to rip\n", diskletter);
+
     /* if this is null it means this is a 'test drive letter only' 1 arg run */
     if(outfilepath == NULL)
     {
         myCloseHandle(diskhandle, "diskhandle");
-        if(geo.BytesPerSector == 2048)
-        {
-            wprintf(L"Drive %c seems to be OK and ready to rip, BytesPerSector = 2048, as expected\n",
-                diskletter);
-        }
-        else
-        {
-            wprintf(L"Drive %c seems to be OK and ready to rip, BytesPerSector = %u, unexpected but might be OK\n",
-                diskletter, geo.BytesPerSector);
-        }
         return 0;
     }
 
@@ -225,7 +250,7 @@ static int doit(char diskletter, const wchar_t * outfilepath)
         return 1;
     }
 
-    ret = docopy(diskhandle, isohandle, geo.BytesPerSector);
+    ret = docopy(diskhandle, isohandle, geo.Geometry.BytesPerSector, geo.DiskSize.QuadPart);
     myCloseHandle(diskhandle, "diskhandle");
     myCloseHandle(isohandle, "isohandle");
     return ret;
