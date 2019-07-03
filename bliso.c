@@ -165,6 +165,11 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, 
     return 0;
 }
 
+static double toMib(s64 size)
+{
+    return size / (1024.0 * 1024.0);
+}
+
 static int doit(char diskletter, const wchar_t * outfilepath)
 {
     HANDLE diskhandle;
@@ -219,10 +224,10 @@ static int doit(char diskletter, const wchar_t * outfilepath)
         return 1;
     }
 
-    wprintf(L"Disc %c name: %ls\n", diskletter, name);
-    wprintf(L"Disc %c size: %lld\n", diskletter, geo.DiskSize.QuadPart);
-    wprintf(L"Disc %c block size: %u\n", diskletter, geo.Geometry.BytesPerSector);
-    wprintf(L"Disc %c seems ready to rip\n", diskletter);
+    wprintf(L"Disc %c: ready, %u byte blocks, %lld bytes, %.3f MiB, %ls\n",
+        diskletter, geo.Geometry.BytesPerSector, geo.DiskSize.QuadPart,
+        toMib(geo.DiskSize.QuadPart), name
+    );
 
     /* if this is null it means this is a 'test drive letter only' 1 arg run */
     if(outfilepath == NULL)
