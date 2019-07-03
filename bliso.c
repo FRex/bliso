@@ -142,19 +142,17 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, 
         printProgress(starttime, totalread, desiredsize);
     } /* while 1 */
 
+    if(totalread < desiredsize)
+        wprintf(L"PADDING: from %lld to %lld\n", totalread, desiredsize);
+
     memset(buff, 0x0, buffsize);
     while(totalread < desiredsize)
     {
         const s64 need = desiredsize - totalread;
         readcount = (need < ((s64)buffsize)) ? ((unsigned)need) : buffsize;
-
         totalread += readcount;
-
         if(!WriteFile(isohandle, buff, readcount, &writecount, NULL))
-        {
-            fwprintf(stderr, L"WriteFile failed, GetLastError() = %u\n", GetLastError());
-            return 1;
-        }
+            return printFuncErr("WriteFile");
 
         if(writecount != readcount)
         {
@@ -177,6 +175,7 @@ static int isDiskAvailable(char upperLetter)
     return (d >> (upperLetter - 'A')) & 1;
 }
 
+/* last param is for 'all' option, to print 'errors' to stdout instead of stderr then */
 static int doit(char diskletter, const wchar_t * outfilepath, FILE * discerrto)
 {
     HANDLE diskhandle;
