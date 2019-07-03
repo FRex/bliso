@@ -170,7 +170,7 @@ static double toMib(s64 size)
     return size / (1024.0 * 1024.0);
 }
 
-static int doit(char diskletter, const wchar_t * outfilepath)
+static int doit(char diskletter, const wchar_t * outfilepath, FILE * discerrto)
 {
     HANDLE diskhandle;
     HANDLE isohandle;
@@ -182,7 +182,8 @@ static int doit(char diskletter, const wchar_t * outfilepath)
     diskhandle = openDiskHandle(diskletter);
     if(diskhandle == INVALID_HANDLE_VALUE)
     {
-        fwprintf(stderr, L"openDiskHandle('%c') returned INVALID_HANDLE_VALUE, GetLastError() = %u\n", diskletter, GetLastError());
+        fwprintf(discerrto, L"Disc %c: openDiskHandle returned INVALID_HANDLE_VALUE, GetLastError() = %u\n",
+            diskletter, GetLastError());
         return 1;
     }
 
@@ -191,12 +192,14 @@ static int doit(char diskletter, const wchar_t * outfilepath)
         const DWORD lasterror = GetLastError();
         if(lasterror == ERROR_NOT_READY)
         {
-            fwprintf(stderr, L"%c - DeviceIoControl returned false, GetLastError() == %u == ERROR_NOT_READY, no disc in drive?\n",
-                diskletter, lasterror);
+            fwprintf(discerrto,
+                L"Disc %c: DeviceIoControl returned false, GetLastError() == %u == ERROR_NOT_READY, no disc in drive?\n",
+                diskletter, lasterror
+            );
         }
         else
         {
-            fwprintf(stderr, L"%c - DeviceIoControl returned false, GetLastError() = %u\n", diskletter, lasterror);
+            fwprintf(discerrto, L"Disc %c: DeviceIoControl returned false, GetLastError() = %u\n", diskletter, lasterror);
         }
         myCloseHandle(diskhandle, "diskhandle");
         return 1;
@@ -204,14 +207,15 @@ static int doit(char diskletter, const wchar_t * outfilepath)
 
     if(geo.Geometry.MediaType != RemovableMedia)
     {
-        fwprintf(stderr, L"geo.MediaType is not RemovableMedia\n");
+        fwprintf(discerrto, L"Disc %c: geo.Geometry.MediaType is %d != RemovableMedia (%d)\n",
+            diskletter, (int)geo.Geometry.MediaType, (int)RemovableMedia);
         myCloseHandle(diskhandle, "diskhandle");
         return 1;
     }
 
     if(geo.Geometry.BytesPerSector == 0u)
     {
-        fwprintf(stderr, L"geo.BytesPerSector is 0\n");
+        fwprintf(discerrto, L"Disc %c: geo.Geometry.BytesPerSector is 0\n", diskletter);
         myCloseHandle(diskhandle, "diskhandle");
         return 1;
     }
@@ -219,7 +223,7 @@ static int doit(char diskletter, const wchar_t * outfilepath)
     memset(name, 0x0, sizeof(wchar_t) * 512);
     if(!GetVolumeInformationByHandleW(diskhandle, name, 510, NULL, NULL, NULL, NULL, 0))
     {
-        fwprintf(stderr, L"%c - GetVolumeInformationByHandleW failed, GetLastError() = %u\n", diskletter, GetLastError());
+        fwprintf(discerrto, L"Disc %c: GetVolumeInformationByHandleW failed, GetLastError() = %u\n", diskletter, GetLastError());
         myCloseHandle(diskhandle, "diskhandle");
         return 1;
     }
@@ -279,5 +283,5 @@ int wmain(int argc, wchar_t ** argv)
     }
 
     /* this access and char cast is safe after isGoodDiskArg returned true */
-    return doit((char)argv[1][0], (argc == 3)?argv[2]:NULL);
+    return doit((char)argv[1][0], (argc == 3)?argv[2]:NULL, stderr);
 }
