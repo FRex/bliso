@@ -170,6 +170,15 @@ static double toMib(s64 size)
     return size / (1024.0 * 1024.0);
 }
 
+static int isDiskAvailable(char upperLetter)
+{
+    if(!('A' <= upperLetter && upperLetter <= 'Z'))
+        return 0;
+
+    const DWORD d = GetLogicalDrives();
+    return (d >> (upperLetter - 'A')) & 1;
+}
+
 static int doit(char diskletter, const wchar_t * outfilepath, FILE * discerrto)
 {
     HANDLE diskhandle;
@@ -178,6 +187,12 @@ static int doit(char diskletter, const wchar_t * outfilepath, FILE * discerrto)
     DWORD unused;
     int ret;
     wchar_t name[512];
+
+    if(!isDiskAvailable(diskletter))
+    {
+        fwprintf(discerrto, L"Disc %c: bit not set in GetLogicalDrives()\n", diskletter);
+        return 1;
+    }
 
     diskhandle = openDiskHandle(diskletter);
     if(diskhandle == INVALID_HANDLE_VALUE)
