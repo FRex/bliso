@@ -188,6 +188,13 @@ static int doit(char diskletter, const wchar_t * outfilepath)
         return 1;
     }
 
+    if(outfilepath == NULL)
+    {
+        myCloseHandle(diskhandle, "diskhandle");
+        wprintf(L"Drive %c seems to be OK and ready to rip\n", diskletter);
+        return 0;
+    }
+
     isohandle = openWriteFileNoClobber(outfilepath);
     if(isohandle == INVALID_HANDLE_VALUE)
     {
@@ -215,11 +222,12 @@ static int doit(char diskletter, const wchar_t * outfilepath)
 
 int wmain(int argc, wchar_t ** argv)
 {
-    if(argc != 3)
+    if(argc != 3 && argc != 2)
     {
         const wchar_t * fname = filepath_to_filename(argv[0]);
         fwprintf(stderr, L"%ls - rip a CD/DVD to an iso file\n", fname);
         fwprintf(stderr, L"Usage (rip): %ls diskletter isofile\n", fname);
+        fwprintf(stderr, L"Usage (check drive): %ls diskletter\n", fname);
         return 1;
     }
 
@@ -230,5 +238,5 @@ int wmain(int argc, wchar_t ** argv)
     }
 
     /* this access and char cast is safe after isGoodDiskArg returned true */
-    return doit((char)argv[1][0], argv[2]);
+    return doit((char)argv[1][0], (argc == 3)?argv[2]:NULL);
 }
