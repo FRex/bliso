@@ -61,10 +61,11 @@ static void myCloseHandle(HANDLE h, const char * name)
         if(CloseHandle(h))
             return;
 
+        fwprintf(stderr, L"Failed to CloseHandle '%s' on attempt %d, GetLastError() = %d\n", name, i, GetLastError());
         Sleep(1500);
     }
 
-    fwprintf(stderr, L"FAILED to CloseHandle '%s' 5 times, with Sleep(1500) in  between!\n", name);
+    fwprintf(stderr, L"FAILED to CloseHandle '%s' 5 times, with Sleep(1500) in  between, giving up!\n", name);
 }
 
 static unsigned calcbuffsize(unsigned bytespersector)
@@ -188,6 +189,7 @@ static int doit(char diskletter, const wchar_t * outfilepath)
         return 1;
     }
 
+    /* if this is null it means this is a 'test drive letter only' 1 arg run */
     if(outfilepath == NULL)
     {
         myCloseHandle(diskhandle, "diskhandle");
