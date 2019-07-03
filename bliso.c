@@ -83,15 +83,34 @@ static unsigned calcbuffsize(unsigned bytespersector)
     return ret;
 }
 
+static int printFuncErr(const char * funcname)
+{
+    fwprintf(stderr, L"%s failed, GetLastError() = %u\n", funcname, GetLastError());
+    return 1;
+}
+
+static double toMiB(s64 size)
+{
+    return size / (1024.0 * 1024.0);
+}
+
+static void printProgress(double starttime, s64 totalread, s64 desiredsize)
+{
+    const double elapsedtime = mytime() - starttime;
+    const double mib = toMiB(totalread);
+    const double percent = 100.0 * (totalread / (double)desiredsize);
+    wprintf(L"PROGRESS: %lld/%lld, %0.1f%%, %.3f MiB, %.1fs, %.3f MiB/s\n",
+        totalread, desiredsize, percent, mib, elapsedtime, mib / elapsedtime);
+}
+
 static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, s64 desiredsize)
 {
     unsigned buffsize;
     DWORD readcount, writecount;
     s64 totalread;
     void * buff;
-    double starttime, elapsedtime;
+    double starttime;
 
-    wprintf(L"bytes per sector: %u\n", bytespersector);
     buffsize = calcbuffsize(bytespersector);
     buff = malloc(buffsize);
     if(!buff)
@@ -105,21 +124,14 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, 
     while(1)
     {
         if(!ReadFile(diskhandle, buff, buffsize, &readcount, NULL))
-        {
-            fwprintf(stderr, L"ReadFile failed, GetLastError() = %u\n", GetLastError());
-            return 1;
-        }
+            return printFuncErr("ReadFile");
 
         totalread += readcount;
-        wprintf(L"read: %u\n", readcount);
         if(readcount == 0u)
             break;
 
         if(!WriteFile(isohandle, buff, readcount, &writecount, NULL))
-        {
-            fwprintf(stderr, L"WriteFile failed, GetLastError() = %u\n", GetLastError());
-            return 1;
-        }
+            return printFuncErr("WriteFile");
 
         if(writecount != readcount)
         {
@@ -127,11 +139,7 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, 
             return 1;
         }
 
-        elapsedtime = mytime() - starttime;
-        wprintf(L"progress so far: %lld bytes, %.3f MiB, %.3fs, %.3f MiB/s\n",
-            totalread, totalread / (1024.0 * 1024.0),
-            elapsedtime, totalread / (1024.0 * 1024.0 * elapsedtime)
-        );
+        printProgress(starttime, totalread, desiredsize);
     } /* while 1 */
 
     memset(buff, 0x0, buffsize);
@@ -155,19 +163,9 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, 
         }
     }
 
-    elapsedtime = mytime() - starttime;
-
-    wprintf(L"ALL OK: total write: %lld bytes, %.3f MiB, %.3fs, %.3f MiB/s\n",
-        totalread, totalread / (1024.0 * 1024.0),
-        elapsedtime, totalread / (1024.0 * 1024.0 * elapsedtime)
-    );
+    printProgress(starttime, totalread, desiredsize);
     free(buff);
     return 0;
-}
-
-static double toMib(s64 size)
-{
-    return size / (1024.0 * 1024.0);
 }
 
 static int isDiskAvailable(char upperLetter)
@@ -245,7 +243,7 @@ static int doit(char diskletter, const wchar_t * outfilepath, FILE * discerrto)
 
     wprintf(L"Disc %c: ready, %u byte blocks, %lld bytes, %.3f MiB, %ls\n",
         diskletter, geo.Geometry.BytesPerSector, geo.DiskSize.QuadPart,
-        toMib(geo.DiskSize.QuadPart), name
+        toMiB(geo.DiskSize.QuadPart), name
     );
 
     /* if this is null it means this is a 'test drive letter only' 1 arg run */
