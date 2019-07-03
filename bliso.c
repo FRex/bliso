@@ -163,6 +163,7 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, 
 
     printProgress(starttime, totalread, desiredsize);
     free(buff);
+    wprintf(L"DONE!\n");
     return 0;
 }
 
