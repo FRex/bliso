@@ -18,6 +18,14 @@ static const wchar_t * filepath_to_filename(const wchar_t * path)
     return path + lastslash;
 }
 
+static double mytime(void)
+{
+    LARGE_INTEGER freq, ret;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&ret);
+    return ((double)ret.QuadPart) / ((double)freq.QuadPart);
+}
+
 static int isGoodDiskArg(const wchar_t * argv)
 {
     if(wcslen(argv) != 1)
@@ -80,6 +88,7 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector)
     DWORD readcount, writecount;
     s64 totalread;
     void * buff;
+    double starttime, elapsedtime;
 
     wprintf(L"bytes per sector: %u\n", bytespersector);
     buffsize = calcbuffsize(bytespersector);
@@ -91,6 +100,7 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector)
     }
 
     totalread = 0;
+    starttime = mytime();
     while(1)
     {
         if(!ReadFile(diskhandle, buff, buffsize, &readcount, NULL))
@@ -117,7 +127,12 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector)
         }
     } /* while 1 */
 
-    wprintf(L"ALL OK: total read/write: %lld bytes, %.3f MiB\n", totalread, totalread / (1024.0 * 1024.0));
+    elapsedtime = mytime() - starttime;
+
+    wprintf(L"ALL OK: total read/write: %lld bytes, %.3f MiB, %.3fs, %.3f MiB/s\n",
+        totalread, totalread / (1024.0 * 1024.0),
+        elapsedtime, totalread / (1024.0 * 1024.0 * elapsedtime)
+    );
     free(buff);
     return 0;
 }
@@ -189,7 +204,7 @@ int wmain(int argc, wchar_t ** argv)
     {
         const wchar_t * fname = filepath_to_filename(argv[0]);
         fwprintf(stderr, L"%ls - rip a CD/DVD to an iso file\n", fname);
-        fwprintf(stderr, L"Usage: %ls diskletter isofile\n", fname);
+        fwprintf(stderr, L"Usage (rip): %ls diskletter isofile\n", fname);
         return 1;
     }
 
