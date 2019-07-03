@@ -280,20 +280,38 @@ static int doit(char diskletter, const wchar_t * outfilepath, FILE * discerrto)
     return ret;
 }
 
+static int print_usage(const wchar_t * argv0)
+{
+    const wchar_t * fname = filepath_to_filename(argv0);
+    fwprintf(stderr, L"%ls - rip a CD/DVD to an iso file\n", fname);
+    fwprintf(stderr, L"Usage (rip): %ls diskletter isofile\n", fname);
+    fwprintf(stderr, L"Usage (check drive): %ls diskletter\n", fname);
+    fwprintf(stderr, L"Usage (check all drives): %ls all\n", fname);
+    return 1;
+}
+
+static int listalldiscs(void)
+{
+    int c;
+
+    for(c = 'A'; c <= 'Z'; ++c)
+        if(isDiskAvailable(c))
+            doit(c, NULL, stdout);
+
+    return 0;
+}
+
 int wmain(int argc, wchar_t ** argv)
 {
     if(argc != 3 && argc != 2)
-    {
-        const wchar_t * fname = filepath_to_filename(argv[0]);
-        fwprintf(stderr, L"%ls - rip a CD/DVD to an iso file\n", fname);
-        fwprintf(stderr, L"Usage (rip): %ls diskletter isofile\n", fname);
-        fwprintf(stderr, L"Usage (check drive): %ls diskletter\n", fname);
-        return 1;
-    }
+        return print_usage(argv[0]);
+
+    if(argc == 2 && 0 == wcscmp(argv[1], L"all"))
+        return listalldiscs();
 
     if(!isGoodDiskArg(argv[1]))
     {
-        fwprintf(stderr, L"'%ls' is not a good disk letter (uppercase A-Z only, no : or / or \\)", argv[1]);
+        fwprintf(stderr, L"'%ls' is not a good disk letter (uppercase A-Z only, no : or / or \\)\n", argv[1]);
         return 1;
     }
 
