@@ -292,13 +292,16 @@ static int print_usage(const wchar_t * argv0)
 
 static int listalldiscs(void)
 {
-    int c;
+    int c, zeros;
 
+    zeros = 0;
+    /* don't print 20+ times the bit not set in GetLogicalDrives() warning */
     for(c = 'A'; c <= 'Z'; ++c)
         if(isDiskAvailable(c))
-            doit(c, NULL, stdout);
+            zeros += (0 == doit(c, NULL, stdout));
 
-    return 0;
+    /* return 1 if no good discs found and 0 if there are any */
+    return zeros == 0;
 }
 
 int wmain(int argc, wchar_t ** argv)
