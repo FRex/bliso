@@ -154,7 +154,16 @@ static int doit(char diskletter, const wchar_t * outfilepath)
 
     if(!DeviceIoControl(diskhandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &geo, sizeof(geo), &unused, NULL))
     {
-        fwprintf(stderr, L"DeviceIoControl return false, GetLastError() = %u\n", GetLastError());
+        const DWORD lasterror = GetLastError();
+        if(lasterror == ERROR_NOT_READY)
+        {
+            fwprintf(stderr, L"%c - DeviceIoControl returned false, GetLastError() == %u == ERROR_NOT_READY, no disc in drive?\n",
+                diskletter, lasterror);
+        }
+        else
+        {
+            fwprintf(stderr, L"%c - DeviceIoControl returned false, GetLastError() = %u\n", diskletter, lasterror);
+        }
         myCloseHandle(diskhandle, "diskhandle");
         return 1;
     }
