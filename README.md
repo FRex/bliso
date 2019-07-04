@@ -85,6 +85,7 @@ $ sha1sum *.iso
 ```
 
 ```
+$ bliso I kingdoms.iso
 Disc I: ready, 2048 byte blocks, 8268611584 bytes, 7885.563 MiB, kingdoms
 PROGRESS: 16777216/8268611584, 0.2%, 16.000 MiB, 7.5s, 2.121 MiB/s
 PROGRESS: 33554432/8268611584, 0.4%, 32.000 MiB, 16.3s, 1.960 MiB/s
