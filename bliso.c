@@ -145,6 +145,10 @@ static int docopy(HANDLE diskhandle, HANDLE isohandle, unsigned bytespersector, 
     if(totalread < desiredsize)
         wprintf(L"PADDING: from %lld to %lld\n", totalread, desiredsize);
 
+    if(totalread > desiredsize)
+        fwprintf(stderr, L"WARNING: read more (%lld) than DISK_GEOMETRY_EX.DiskSize (%lld)\n",
+            totalread, desiredsize);
+
     memset(buff, 0x0, buffsize);
     while(totalread < desiredsize)
     {
