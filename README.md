@@ -1,13 +1,15 @@
 # bliso
 
 Small standalone Windows only C command line program to rip raw data from a CD
-or DVD or similar into an iso file.
+or DVD or similar into an iso file (if the disc contains an ISO filesystem originally).
 
 It tries to be friendly to user usage and script parsing, print good error
 and usage messages, check the WinAPI calls, won't clobber output file, etc.
 
 Written for personal use, for fun and to learn and experiment. If you use it be
 careful and check that the rip is correct size, the ripped iso file mounts, etc.
+I haven't done a lot of testing with real discs (just few dozen) or much research
+on on-disc formats, this is a very basic tool.
 
 Inspired by
 [automatic-ripping-machine](https://github.com/automatic-ripping-machine/automatic-ripping-machine)
